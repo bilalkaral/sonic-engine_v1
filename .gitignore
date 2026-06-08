@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Runtime temp files (audio processing)
+temp/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Benchmark files (moved to bpm_benchmark/ on desktop)
+tools/cache/
+tools/dataset.json
+tools/results.json
+tools/linkler.csv
+tools/bench_key.py
+tools/benchmark.js
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.env
+
+# Claude Code session files
+.claude/
+
+# Benchmark temp output
+tools/.tmp/

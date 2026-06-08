@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sonic Engine — Audio Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --border: #1e1e1e;
+      --accent: #c8f135;
+      --accent-hover: #d4f54a;
+      --accent2: #ff4d6d;
+      --text: #e8e8e8;
+      --muted: #666;
+      --card: #141414;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(200,241,53,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,241,53,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 900px;
+      padding: 60px 32px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 9vw, 84px);
+      letter-spacing: 2px;
+      line-height: 0.9;
+      color: var(--text);
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 300;
+      margin-top: 4px;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 900px;
+      padding: 24px 32px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .input-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .url-row {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    #youtube-url {
+      flex: 1;
+      background: #050505;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 16px 18px;
+      border-radius: 4px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    #youtube-url:focus { border-color: var(--accent); }
+
+    #analyze-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 0 32px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    #analyze-btn:hover { background: var(--accent-hover); box-shadow: 0 0 15px rgba(200,241,53,0.3); }
+    #analyze-btn:active { transform: scale(0.98); }
+    #analyze-btn:disabled { background: #2a2a2a; color: #555; cursor: not-allowed; box-shadow: none; }
+
+    #video-preview {
+      display: none;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    #video-preview.visible { display: flex; }
+
+    #video-thumb { width: 90px; height: 55px; object-fit: cover; border-radius: 2px; }
+    .video-info { flex: 1; overflow: hidden; }
+    .video-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .video-meta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+    #status { display: none; align-items: center; gap: 12px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); }
+    #status.visible { display: flex; }
+
+    .pulse { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: blink 1s infinite alternate; }
+    @keyframes blink { from { opacity: 0.3; } to { opacity: 1; box-shadow: 0 0 8px var(--accent); } }
+
+    #results { display: none; flex-direction: column; gap: 16px; animation: fadeUp 0.5s ease forwards; opacity: 0; transform: translateY(20px); }
+    #results.visible { display: flex; opacity: 1; transform: translateY(0); }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    .results-header { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); }
+    .metric-card.key-card::before { background: var(--accent2); }
+    .metric-card.delays-card::before { background: #888; }
+
+    .metric-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+    
+    .metric-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 64px; 
+      line-height: 1;
+      color: var(--text);
+      letter-spacing: 2px;
+      white-space: nowrap;
+    }
+    .metric-card.key-card .metric-value { color: var(--accent2); }
+
+    .metric-unit { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+    /* Delay tablosu: satırlar = Note / Dotted / Triplet, sütunlar = 1/4 1/8 1/16 1/32 */
+    #delays-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .delay-row { display: grid; grid-template-columns: 70px repeat(4, 1fr); gap: 10px; align-items: baseline; }
+    .delay-rl { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .delay-cell { font-family: 'DM Mono', monospace; font-size: 16px; color: var(--text); white-space: nowrap; }
+    .delay-cell small { font-size: 10px; color: var(--muted); margin-left: 2px; }
+    .delay-row.delay-head .delay-cell { font-size: 11px; color: var(--accent); letter-spacing: 1px; }
+    .delay-row.delay-head { border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+    /* Tempo kartı alternatif (½ / 2×) çipleri */
+    .bpm-alts { display: flex; gap: 8px; margin-top: 4px; }
+    .bpm-alt {
+      font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px;
+      background: transparent; color: var(--muted); border: 1px solid var(--border);
+      border-radius: 3px; padding: 4px 8px; cursor: pointer; transition: all 0.15s ease;
+    }
+    .bpm-alt:hover { border-color: var(--accent); color: var(--accent); }
+    .bpm-alt strong { color: var(--text); font-weight: 500; }
+
+    /* Camelot rozeti ve güven göstergesi */
+    .camelot {
+      display: inline-block; font-family: 'DM Mono', monospace; font-size: 11px;
+      letter-spacing: 1px; background: rgba(255,77,109,0.12); color: var(--accent2);
+      border: 1px solid rgba(255,77,109,0.35); border-radius: 3px; padding: 2px 7px; margin-right: 8px;
+    }
+    .conf-low { color: #c9a227; }
+
+    .buttons-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 8px; }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 18px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #download-btn { background: #1a1a1a; border: 1px solid #333; color: var(--text); }
+    #download-btn:hover { border-color: var(--accent); color: var(--accent); background: #222; }
+
+    .stems-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stem-btn { background: #fff; color: #000; border: none; }
+    .stem-btn:hover:not(:disabled) { background: #e0e0e0; }
+    .stem-btn:disabled { color: #000; cursor: not-allowed; }
+
+    #error-box { display: none; background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.3); color: var(--accent2); font-family: 'DM Mono', monospace; font-size: 12px; padding: 16px 20px; border-radius: 4px; gap: 10px; align-items: center; }
+    #error-box.visible { display: flex; }
+
+    footer { margin-top: auto; padding: 30px; font-family: 'DM Mono', monospace; font-size: 10px; color: #333; letter-spacing: 2px; text-align: center; }
+
+    @media (max-width: 600px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+      .delay-row { grid-template-columns: 52px repeat(4, 1fr); gap: 6px; }
+      .delay-cell { font-size: 13px; }
+      .stems-grid { grid-template-columns: 1fr; }
+      .url-row { flex-direction: column; }
+      #analyze-btn { padding: 16px; }
+      .metric-value { font-size: 56px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">// Sonic Intelligence</div>
+  <h1>STEM & BPM<br><span>ANALYZER</span></h1>
+  <p class="subtitle">Extract tempo, key, and studio stems directly from YouTube</p>
+</header>
+
+<main>
+  <div class="input-card">
+    <div class="input-label">// Input Source</div>
+    <div class="url-row">
+      <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false" />
+      <button id="analyze-btn">Analyze URL</button>
+    </div>
+    
+    <div style="text-align: center; margin: 4px 0; color: var(--muted); font-size: 11px; font-family: 'DM Mono', monospace; text-transform: uppercase;">— OR —</div>
+    
+    <div class="url-row">
+      <input type="file" id="local-file" accept="audio/*,video/*" style="display: none;" />
+      <button id="upload-btn" style="flex: 1; background: transparent; border: 1px dashed var(--border); color: var(--text); padding: 16px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 13px; cursor: pointer; transition: all 0.2s;">Drop audio/video file here or click to browse</button>
+    </div>
+
+    <div id="video-preview">
+      <img id="video-thumb" src="" alt="thumbnail" />
+      <div class="video-info">
+        <div class="video-title" id="video-title-text"></div>
+        <div class="video-meta" id="video-meta-text"></div>
+      </div>
+    </div>
+
+    <div id="status">
+      <div class="pulse"></div>
+      <span id="status-text">Processing audio stream...</span>
+    </div>
+
+    <div id="error-box">
+      <span>⚠</span>
+      <span id="error-text"></span>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="results-header">// Intelligence Report</div>
+    
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Tempo</div>
+        <div class="metric-value" id="bpm-value">—</div>
+        <div class="metric-unit">beats per minute</div>
+        <div class="bpm-alts" id="bpm-alts"></div>
+      </div>
+      <div class="metric-card key-card">
+        <div class="metric-label">Musical Key</div>
+        <div class="metric-value" id="key-value">—</div>
+        <div class="metric-unit"><span class="camelot" id="key-camelot" style="display:none;"></span><span id="key-sub">detected tonality</span></div>
+        <div class="bpm-alts" id="key-alts"></div>
+      </div>
+    </div>
+
+    <div class="metric-card delays-card" id="delays-card" style="display: none;">
+      <div class="metric-label">Studio Delays (ms)</div>
+      <div class="delays-grid" id="delays-grid"></div>
+    </div>
+
+    <div class="buttons-grid">
+      <a class="action-btn" id="download-btn" href="#" download="audio.mp3">Download Original MP3</a>
+      
+      <div class="stems-grid" id="ai-stems-container" style="display: none;">
+        <button class="action-btn stem-btn" id="stems-4-btn">
+          <span>Extract 4 Stems (ZIP)</span>
+        </button>
+        <button class="action-btn stem-btn" id="stems-2-btn">
+          <span>Acapella & Instrumental</span>
+        </button>
+      </div>
+
+      <div class="stems-grid" id="stems-result-container" style="display: none;">
+        <a class="action-btn" id="dl-vocals-btn" href="#" style="background: var(--accent); color: #000;">🎤 Download Acapella</a>
+        <a class="action-btn" id="dl-inst-btn" href="#" style="background: var(--accent); color: #000;">🎹 Download Instrumental</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div>ENGINEERED FOR PRODUCERS</div>
+  <div style="margin-top: 10px; font-size: 12px; color: #888;">
+    CREATED BY <a href="https://instagram.com/bilal.karal" target="_blank" style="color: var(--accent); text-decoration: none; transition: color 0.2s; letter-spacing: 1px;">@bilal.karal</a>
+  </div>
+</footer>
+
+<script>
+  const urlInput = document.getElementById('youtube-url');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const uploadBtn = document.getElementById('upload-btn');
+  const localFile = document.getElementById('local-file');
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('status-text');
+  const resultsEl = document.getElementById('results');
+  const bpmValue = document.getElementById('bpm-value');
+  const keyValue = document.getElementById('key-value');
+  const downloadBtn = document.getElementById('download-btn');
+  const errorBox = document.getElementById('error-box');
+  const errorText = document.getElementById('error-text');
+  const videoPreview = document.getElementById('video-preview');
+  const videoThumb = document.getElementById('video-thumb');
+  const videoTitleText = document.getElementById('video-title-text');
+  const videoMetaText = document.getElementById('video-meta-text');
+  const delaysCard = document.getElementById('delays-card');
+  const delaysGrid = document.getElementById('delays-grid');
+  const bpmAltsEl = document.getElementById('bpm-alts');
+  const keyCamelotEl = document.getElementById('key-camelot');
+  const keySubEl = document.getElementById('key-sub');
+  const keyAltsEl = document.getElementById('key-alts');
+  
+  // Stems Elementleri
+  const aiStemsContainer = document.getElementById('ai-stems-container');
+  const stems4Btn = document.getElementById('stems-4-btn');
+  const stems2Btn = document.getElementById('stems-2-btn');
+  const stemsResultContainer = document.getElementById('stems-result-container');
+  const dlVocalsBtn = document.getElementById('dl-vocals-btn');
+  const dlInstBtn = document.getElementById('dl-inst-btn');
+  
+  let currentDownloadId = null;
+  let currentVideoTitle = '';
+  let progressInterval = null;
+
+  // Yeni Eklenen State (Durum) Değişkenleri
+  let is4StemsReady = false;
+  let is2StemsReady = false;
+  let zipDownloadUrl = '';
+
+  function setStatus(msg) { statusText.textContent = msg; statusEl.classList.add('visible'); }
+  function hideStatus() { statusEl.classList.remove('visible'); }
+  function showError(msg) { errorText.textContent = msg; errorBox.classList.add('visible'); }
+  function hideError() { errorBox.classList.remove('visible'); }
+
+  function formatDuration(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${String(sec).padStart(2, '0')}`;
+  }
+
+  // ── Sonuç render yardımcıları (URL ve dosya akışları ortak kullanır) ──
+  let currentBpm = null;
+
+  // Sunucudaki calculateStudioDelays ile aynı formül; ½/2× tıklamasında
+  // delay tablosunu anında yeniden hesaplamak için.
+  function computeDelays(bpm) {
+    if (!bpm || bpm <= 0) return null;
+    const q = 60000 / bpm;
+    const noteMs = d => (q * 4) / d;
+    const r = v => Math.round(v * 10) / 10;
+    const build = f => {
+      const o = {};
+      [4, 8, 16, 32].forEach(d => { o['1/' + d] = r(noteMs(d) * f); });
+      return o;
+    };
+    return { note: build(1), dotted: build(1.5), triplet: build(2 / 3) };
+  }
+
+  function renderDelays(d) {
+    if (!d) { delaysCard.style.display = 'none'; delaysGrid.innerHTML = ''; return; }
+    const cols = ['1/4', '1/8', '1/16', '1/32'];
+    const cell = ms => {
+      const hz = ms ? (1000 / ms).toFixed(2) + ' Hz (LFO sync)' : '';
+      return `<span class="delay-cell" title="${hz}">${ms}<small>ms</small></span>`;
+    };
+    const row = (label, obj) =>
+      `<div class="delay-row"><span class="delay-rl">${label}</span>${cols.map(c => cell(obj[c])).join('')}</div>`;
+    delaysGrid.innerHTML =
+      `<div class="delay-row delay-head"><span class="delay-rl"></span>${cols.map(c => `<span class="delay-cell">${c}</span>`).join('')}</div>` +
+      row('Note', d.note) + row('Dotted', d.dotted) + row('Triplet', d.triplet);
+    delaysCard.style.display = 'flex';
+  }
+
+  function applyBpm(bpm) {
+    currentBpm = bpm;
+    bpmValue.textContent = bpm;
+    renderDelays(computeDelays(bpm));
+    bpmAltsEl.innerHTML = '';
+    const mk = (label, val) => {
+      const b = document.createElement('button');
+      b.className = 'bpm-alt';
+      b.innerHTML = `${label} <strong>${val}</strong>`;
+      b.title = 'Bu tempoyu kullan';
+      b.addEventListener('click', () => applyBpm(val));
+      return b;
+    };
+    bpmAltsEl.appendChild(mk('½', Math.round(bpm / 2)));
+    bpmAltsEl.appendChild(mk('2×', bpm * 2));
+  }
+
+  function renderResult(data) {
+    // Tempo
+    if (typeof data.bpm === 'number') {
+      applyBpm(data.bpm);
+    } else {
+      currentBpm = null;
+      bpmValue.textContent = data.bpm || 'N/A';
+      bpmAltsEl.innerHTML = '';
+      renderDelays(data.delays_ms || null);
+    }
+
+    // Key + Camelot
+    keyValue.textContent = data.key || 'N/A';
+    const setCamelot = (c) => {
+      if (c) { keyCamelotEl.textContent = c; keyCamelotEl.style.display = 'inline-block'; }
+      else { keyCamelotEl.style.display = 'none'; }
+    };
+    setCamelot(data.camelot);
+
+    // Güven göstergesi + alternatif key çipleri (düşük güvende)
+    keyAltsEl.innerHTML = '';
+    const hasKey = data.key && data.key !== 'N/A';
+    if (!hasKey) {
+      keySubEl.textContent = 'detected tonality';
+      keySubEl.className = '';
+    } else if (data.confident === false && data.keyAlts && data.keyAlts.length) {
+      keySubEl.textContent = 'low confidence — pick:';
+      keySubEl.className = 'conf-low';
+      data.keyAlts.forEach(a => {
+        const b = document.createElement('button');
+        b.className = 'bpm-alt';
+        b.innerHTML = a.camelot ? `${a.key} <strong>${a.camelot}</strong>` : a.key;
+        b.title = "Bu key'i kullan";
+        b.addEventListener('click', () => { keyValue.textContent = a.key; setCamelot(a.camelot); });
+        keyAltsEl.appendChild(b);
+      });
+    } else {
+      keySubEl.textContent = (data.confident === false) ? 'low confidence' : 'detected tonality';
+      keySubEl.className = (data.confident === false) ? 'conf-low' : '';
+    }
+
+    resultsEl.classList.add('visible');
+  }
+
+  function reset() {
+    hideStatus(); hideError();
+    resultsEl.classList.remove('visible');
+    downloadBtn.style.display = 'none';
+    aiStemsContainer.style.display = 'none';
+    stemsResultContainer.style.display = 'none';
+    videoPreview.classList.remove('visible');
+    videoThumb.style.display = 'block'; // Ensure thumbnail is visible normally
+    delaysCard.style.display = 'none';
+    delaysGrid.innerHTML = '';
+    bpmAltsEl.innerHTML = '';
+    keyAltsEl.innerHTML = '';
+    keyCamelotEl.style.display = 'none';
+    keySubEl.textContent = 'detected tonality';
+    keySubEl.className = '';
+    currentBpm = null;
+
+    // State ve Butonları sıfırla
+    is4StemsReady = false;
+    is2StemsReady = false;
+    zipDownloadUrl = '';
+    stems4Btn.style.background = '#fff';
+    stems2Btn.style.background = '#fff';
+    stems4Btn.style.opacity = '1';
+    stems2Btn.style.opacity = '1';
+    stems4Btn.innerHTML = '<span>Extract 4 Stems (ZIP)</span>';
+    stems2Btn.innerHTML = '<span>Acapella & Instrumental</span>';
+    stems4Btn.disabled = false;
+    stems2Btn.disabled = false;
+    currentVideoTitle = '';
+    if(progressInterval) clearInterval(progressInterval);
+  }
+
+  // Local File Upload Logic
+  uploadBtn.addEventListener('click', () => localFile.click());
+
+  localFile.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    reset();
+    uploadBtn.disabled = true;
+    analyzeBtn.disabled = true;
+    urlInput.value = '';
+    setStatus('Uploading and analyzing local file...');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/analyze-file', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Analysis failed');
+
+      hideStatus();
+
+      videoThumb.src = ''; 
+      videoThumb.style.display = 'none'; // hide for local files
+      videoTitleText.textContent = data.title;
+      videoMetaText.textContent = data.author;
+      videoPreview.classList.add('visible');
+
+      renderResult(data);
+
+      if (data.downloadId) {
+        currentDownloadId = data.downloadId;
+        currentVideoTitle = data.title;
+        const safeTitle = data.title.replace(/[\\/:*?"<>|]/g, '').trim();
+        const safeKey = data.key || 'Unknown';
+        const fileName = `${safeTitle} - ${data.bpm} BPM - ${safeKey}.mp3`;
+        
+        downloadBtn.href = `/download/${data.downloadId}?name=${encodeURIComponent(fileName)}`;
+        downloadBtn.download = fileName; 
+        downloadBtn.style.display = 'flex';
+
+        aiStemsContainer.style.display = 'grid'; 
+      }
+
+    } catch (err) {
+      hideStatus();
+      showError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      uploadBtn.disabled = false;
+      analyzeBtn.disabled = false;
+      localFile.value = '';
+    }
+  });
+
+  // Drag and Drop
+  uploadBtn.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadBtn.style.borderColor = 'var(--accent)';
+  });
+
+  uploadBtn.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    uploadBtn.style.borderColor = 'var(--border)';
+  });
+
+  uploadBtn.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadBtn.style.borderColor = 'var(--border)';
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      localFile.files = e.dataTransfer.files;
+      localFile.dispatchEvent(new Event('change'));
+    }
+  });
+
+  let debounceTimer;
+  urlInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    videoPreview.classList.remove('visible');
+    const url = urlInput.value.trim();
+    if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) return;
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/video-info?url=${encodeURIComponent(url)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.title) {
+          videoThumb.src = data.thumbnail || '';
+          videoTitleText.textContent = data.title;
+          videoMetaText.textContent = `${data.author} · ${formatDuration(data.duration)}`;
+          videoPreview.classList.add('visible');
+        }
+      } catch (_) {}
+    }, 600);
+  });
+
+  analyzeBtn.addEventListener('click', async () => {
+    const url = urlInput.value.trim();
+    if (!url) { showError('Please enter a valid YouTube URL.'); return; }
+
+    reset();
+    analyzeBtn.disabled = true;
+    setStatus('Downloading & analyzing audio framework...');
+
+    try {
+      const res = await fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Analysis failed');
+
+      hideStatus();
+
+      if (data.thumbnail) {
+        videoThumb.src = data.thumbnail;
+        videoTitleText.textContent = data.title;
+        videoMetaText.textContent = `${data.author} · ${formatDuration(data.duration)}`;
+        videoPreview.classList.add('visible');
+      }
+
+      renderResult(data);
+
+      if (data.downloadId) {
+        currentDownloadId = data.downloadId;
+        currentVideoTitle = data.title;
+        const safeTitle = data.title.replace(/[\\/:*?"<>|]/g, '').trim();
+        const safeKey = data.key || 'Unknown';
+        const fileName = `${safeTitle} - ${data.bpm} BPM - ${safeKey}.mp3`;
+        
+        downloadBtn.href = `/download/${data.downloadId}?name=${encodeURIComponent(fileName)}`;
+        downloadBtn.download = fileName; 
+        downloadBtn.style.display = 'flex';
+
+        aiStemsContainer.style.display = 'grid'; 
+      }
+
+    } catch (err) {
+      hideStatus();
+      showError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      analyzeBtn.disabled = false;
+    }
+  });
+
+  async function handleStemExtraction(type) {
+    if (!currentDownloadId) return;
+    
+    const activeBtn = type === 'all' ? stems4Btn : stems2Btn;
+    const inactiveBtn = type === 'all' ? stems2Btn : stems4Btn;
+    
+    activeBtn.disabled = true;
+    inactiveBtn.disabled = true;
+    inactiveBtn.style.opacity = '0.4'; // İşlem sırasında diğer butonu soluklaştır
+    
+    progressInterval = setInterval(async () => {
+      try {
+        const pRes = await fetch(`/progress/${currentDownloadId}`);
+        const pData = await pRes.json();
+        const pct = pData.progress || 0;
+        
+        if (pct > 0) {
+          activeBtn.innerHTML = `<span>Processing AI... ${pct}%</span>`;
+          activeBtn.style.background = `linear-gradient(90deg, var(--accent) ${pct}%, #fff ${pct}%)`;
+        } else {
+          activeBtn.innerHTML = `<span>Initializing Demucs AI...</span>`;
+        }
+      } catch (e) {}
+    }, 1000);
+
+    try {
+      const res = await fetch('/stems', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ downloadId: currentDownloadId, type }),
+      });
+
+      clearInterval(progressInterval); 
+      
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Sunucuda bir hata oluştu. Terminali kontrol et.");
+      }
+
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error);
+
+      const safeTitle = currentVideoTitle ? currentVideoTitle.replace(/[\\/:*?"<>|]/g, '').trim() : 'Track';
+
+      // İşlem bitince diğer butonu TEKRAR AKTİF ET (Kullanıcı yanlışlıkla basmışsa diye)
+      inactiveBtn.disabled = false;
+      inactiveBtn.style.opacity = '1';
+
+      if (type === 'all') {
+        is4StemsReady = true;
+        zipDownloadUrl = `${data.zipUrl}?title=${encodeURIComponent(safeTitle)}`;
+        
+        activeBtn.innerHTML = `<span>Download Stems (ZIP)</span>`;
+        activeBtn.style.background = 'var(--accent)';
+        activeBtn.disabled = false; // Tıklanabilir yap
+        
+        window.location.href = zipDownloadUrl; // Otomatik indir
+      } 
+      else if (type === 'vocals') {
+        is2StemsReady = true;
+        activeBtn.innerHTML = `<span>Acapella & Inst. (Ready)</span>`;
+        activeBtn.style.background = 'var(--accent)';
+        activeBtn.disabled = true; // Linkler aşağıda belirdi, buna basmaya gerek yok
+        
+        stemsResultContainer.style.display = 'grid'; // Yeni indirme butonlarını göster
+        dlVocalsBtn.href = `${data.vocalsUrl}&title=${encodeURIComponent(safeTitle)}`;
+        dlInstBtn.href = `${data.instrumentalUrl}&title=${encodeURIComponent(safeTitle)}`;
+      }
+
+    } catch (err) {
+      clearInterval(progressInterval);
+      showError(err.message || 'Stem işlemi başarısız oldu.');
+      
+      activeBtn.innerHTML = type === 'all' ? '<span>Extract 4 Stems (ZIP)</span>' : '<span>Acapella & Instrumental</span>';
+      activeBtn.style.background = '#fff';
+      activeBtn.disabled = false;
+      inactiveBtn.disabled = false;
+      inactiveBtn.style.opacity = '1';
+    }
+  }
+
+  // Akıllı Buton Tetikleyicileri
+  stems4Btn.addEventListener('click', () => {
+    if (is4StemsReady) {
+      // Zaten işlendiyse bir daha AI'ı yorma, direkt indir
+      window.location.href = zipDownloadUrl;
+      return;
+    }
+    handleStemExtraction('all');
+  });
+
+  stems2Btn.addEventListener('click', () => {
+    if (is2StemsReady) return;
+    handleStemExtraction('vocals');
+  });
+
+  urlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') analyzeBtn.click();
+  });
+</script>
+</body>
+</html>
