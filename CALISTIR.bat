@@ -24,11 +24,19 @@ if not exist "server.js" (
 
 if not exist "node_modules" (
     echo.
-    echo  Paketler yuklu degil!
-    echo  Once KURULUM.bat dosyasini calistirin.
+    echo  node_modules bulunamadi, npm install calistiriliyor...
     echo.
-    pause
-    exit /b 1
+    call npm install --no-fund --no-audit
+    call npm approve-scripts ffmpeg-static youtube-dl-exec 2>nul
+    call npm install --no-fund --no-audit
+    if not exist "node_modules" (
+        echo.
+        echo  HATA: npm install basarisiz oldu!
+        echo  KURULUM.bat dosyasini calistirip tekrar dene.
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 echo.
