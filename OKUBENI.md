@@ -58,6 +58,18 @@ BPM-Analyzer/
 
 ---
 
+## Doğruluk
+
+| Metrik | Başlangıç | İyileştirilmiş JS | librosa motoru |
+|---|---|---|---|
+| **BPM** tam isabet (±2) | %30 | **%90** | — |
+| **BPM** oktav dahil | %85 | **%90.8** (n=65) | — |
+| **Key** tam isabet | %28.6 | %54.2 | **%62.5** (n=24) |
+
+> Key tespiti zordur; klasik yöntemler bas-ağırlıklı trap/drill içeriğinde %55–65 civarında tıkanır. Daha yükseği için derin öğrenme modeli gerekir.
+
+---
+
 ## Stem Ayırma
 
 Analiz tamamlandıktan sonra iki seçenek çıkar:
