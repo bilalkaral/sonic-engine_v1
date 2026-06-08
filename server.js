@@ -17,7 +17,8 @@ const multer = require('multer');
 const app = express();
 const progressMap = {}; // Demucs yüzdelerini tutmak için
 const PORT = process.env.PORT || 3000;
-const TEMP_DIR = path.join(__dirname, 'temp');
+// Sistem %TEMP% klasörünü kullan — proje klasörü adında boşluk olsa bile çalışır
+const TEMP_DIR = path.join(require('os').tmpdir(), 'bpm-analyzer');
 const MP3_RETENTION_MS = 30 * 60 * 1000; // stem ayırma uzun sürebildiği için kaynak mp3'ü 30 dk tut
 const ID_REGEX = /^[0-9a-f-]{36}$/;       // uuid v4 doğrulaması (path traversal koruması)
 const PYTHON_BIN = process.env.PYTHON || 'python'; // gerekirse PYTHON=py ile değiştirilebilir
